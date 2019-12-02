@@ -211,19 +211,21 @@ class GaussianMixtureData:
         # self.show(gmm_means=means)
         return means
 
-    def show(self, kmc_means=None, gmm_means=None):
+    def show(self, kmc=0, gmm=0):
         """
         Plot all data, including cluster means and means found from Gaussian mixture and k-means clustering models.
-        :param kmc_means: The set of means found by the k-means clustering model.
-        :param gmm_means: The set of means found by the Gaussian mixture model.
+        :param kmc: The number of means to find via k-means clustering. If zero, then self.k_means() is not invoked.
+        :param gmm: The number of means to fin via a Gaussian mixture. If zero, then self.gmm_means() is not invoked.
         :return: None
         """
         if self.dimension == 2:
             plt.plot(self.data[:, 0], self.data[:, 1], 'o', markersize=1)
             plt.plot(self.cluster_means[:, 0], self.cluster_means[:, 1], 'rs', markersize=6)
-            if kmc_means is not None:
+            if kmc > 0:
+                kmc_means = self.k_means(number_of_clusters=kmc)
                 plt.plot(kmc_means[:, 0], kmc_means[:, 1], 'ys', markersize=6)
-            if gmm_means is not None:
+            if gmm > 0:
+                gmm_means = self.gmm_means(number_of_clusters=gmm)
                 plt.plot(gmm_means[:, 0], gmm_means[:, 1], 'ks', markersize=6)
             plt.axis('equal')
             plt.show()
@@ -233,7 +235,8 @@ class GaussianMixtureData:
         Print a subset of the attribute dictionary.
         :return: None
         """
-        print('Dimension:',
+        print('Simulated Gaussian Mixture Model Data:',
+              '\nDimension:',
               self.dimension,
               '\nNumber of Clusters:',
               self.number_of_clusters,
@@ -262,13 +265,9 @@ def observe(number_of_iterations=1,
                                 standard=standard)
         print("ITERATION:", i+1)
         y.report()
-        y.show(kmc_means=y.k_means(), gmm_means=y.gmm_means())
+        y.show(kmc=y.k_means(), gmm=y.gmm_means())
 
 """
 Need to add a method to write your data to some file.
 Need a way to name your data.
-Need to see how to pipe data to an autoencoder (or any other model, for that matter.)
 """
-
-
-observe(number_of_iterations=10, tightness=0.2, cube_side_length=100)

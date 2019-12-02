@@ -29,10 +29,19 @@ np.random.seed(1337)
 
 # MNIST dataset
 (x_train, _), (x_test, _) = mnist.load_data()
+"""
+mnist.load_data() returns a tuple of NumPy arrays: (x_train, y_train), (x_test, y_test). Since this is an autoencoder,
+y_train = x_train, and y_test = x_test. 
+"""
 
 image_size = x_train.shape[1]
 x_train = np.reshape(x_train, [-1, image_size, image_size, 1])
 x_test = np.reshape(x_test, [-1, image_size, image_size, 1])
+"""
+x_train and x_test are 3-tensors whose 2D sections are monochromatic images of numbers. Here, they are being reshaped
+so that the index comes first, then the image dimensions, then the number of channels.
+"""
+
 x_train = x_train.astype('float32') / 255
 x_test = x_test.astype('float32') / 255
 
