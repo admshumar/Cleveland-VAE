@@ -214,9 +214,9 @@ class GaussianMixtureData:
     def show(self, kmc_means=None, gmm_means=None):
         """
         Plot all data, including cluster means and means found from Gaussian mixture and k-means clustering models.
-        :param kmc_means:
-        :param gmm_means:
-        :return:
+        :param kmc_means: The set of means found by the k-means clustering model.
+        :param gmm_means: The set of means found by the Gaussian mixture model.
+        :return: None
         """
         if self.dimension == 2:
             plt.plot(self.data[:, 0], self.data[:, 1], 'o', markersize=1)
