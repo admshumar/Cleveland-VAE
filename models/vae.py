@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from data import data_generator
 
 ### Autoencoder ###
 import tensorflow
@@ -22,7 +23,9 @@ from tensorflow.keras.callbacks import TensorBoard
 # Invocation of Tensorboard callback
 tensorboard = TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=False)
 
-### Data Loading ###
+# Load data
+
+"""
 (X_train, _), (X_test, _) = mnist.load_data()
 shape_x = 28
 shape_y = 28
@@ -32,6 +35,7 @@ X_test = X_test.astype('float32') / 255.
 
 X_train = X_train.reshape(-1,shape_x,shape_y,1)
 X_test = X_test.reshape(-1,shape_x,shape_y,1)
+"""
 
 ### Model ###
 input_img = Input(shape=(shape_x, shape_y, 1))
