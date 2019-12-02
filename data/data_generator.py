@@ -3,13 +3,12 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 import matplotlib.pyplot as plt
 
-# Generate a data set of N observations of a normally distributed variable in R^M,
-# with columns corresponding to the dimensions of an observation and
-# rows corresponding to an observation
-
 
 class GaussianMixtureData:
-    cluster_size = 125
+    """
+    A class that generates data from a specified Gaussian mixture model.
+    """
+    cluster_size = 2500
 
     @classmethod
     def set_cluster_mean(cls, dimension, cube_side_length):
@@ -265,5 +264,11 @@ def observe(number_of_iterations=1,
         y.report()
         y.show(kmc_means=y.k_means(), gmm_means=y.gmm_means())
 
+"""
+Need to add a method to write your data to some file.
+Need a way to name your data.
+Need to see how to pipe data to an autoencoder (or any other model, for that matter.)
+"""
 
-observe(number_of_iterations=10)
+
+observe(number_of_iterations=10, tightness=0.2, cube_side_length=100)
