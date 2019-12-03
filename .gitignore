@@ -4,3 +4,4 @@ tensorboard.sh
 .DS_Store
 data/__pycache__/
 models/.DS_Store
+cleveland_data.csv

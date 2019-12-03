@@ -26,16 +26,27 @@ def get_power_sequence(n):
     power_sequence.append(n)
     return power_sequence[::-1]
 
-# Load data from GMMData
-gmm = data_generator.GaussianMixtureData(dimension=16, tightness=2, random_cluster_size=True)
-x_train, y_train, x_test, y_test = train_test_split(gmm.data, gmm.data, test_size=0.20)
-dimension = gmm.dimension
+# Load data
+def get_data(synthetic=True):
+    if synthetic:
+        gmm = data_generator.GaussianMixtureData(dimension=16, tightness=2, random_cluster_size=True)
+        data = gmm.data
+        dimension = gmm.dimension
+    else:
+        from numpy import genfromtxt
+        data = genfromtxt('../data/cleveland_data.csv', delimiter=',')
+        data = data[1:, 2:]
+        dimension = len(data[0])
+    x_train, x_test = data, data
+    return x_train, x_test, dimension
 
+
+x_train, x_test, dimension = get_data(synthetic=False)
 power_sequence = get_power_sequence(dimension)
 
 # Network parameters
 input_shape = (dimension,)
-batch_size = gmm.total_number_of_points
+batch_size = len(x_train)
 latent_dim = power_sequence[-1]
 
 # Encoder Structure
@@ -75,7 +86,7 @@ tensorboard_callback = TensorBoard(log_dir='./logs',
 # Train the autoencoder
 autoencoder.fit(x_train,
                 x_train,
-                validation_data=(x_test, x_test),
+                # validation_data=(x_test, x_test),
                 epochs=500,
                 batch_size=batch_size,
                 callbacks=[tensorboard_callback])
@@ -101,8 +112,6 @@ def show(data, kmc=0, gmc=0):
             plt.plot(gmc_means[:, 0], gmc_means[:, 1], 'ks', markersize=5)
         plt.axis('equal')
         plt.show()
-        
 
 
-gmm.report()
 show(x_latent, 4, 4)
