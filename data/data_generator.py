@@ -1,6 +1,7 @@
-import numpy as np
+from scipy.stats import wishart
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -8,7 +9,7 @@ class GaussianMixtureData:
     """
     A class that generates data from a specified Gaussian mixture model.
     """
-    cluster_size = 2500
+    cluster_size = 125
 
     @classmethod
     def set_cluster_mean(cls, dimension, cube_side_length):
@@ -25,7 +26,7 @@ class GaussianMixtureData:
     @classmethod
     def set_cluster_variance(cls, dimension, tightness=5, standard=False):
         """
-        Randomly choose a covarance matrix for a Gaussian distribution.
+        Randomly sample a symmetric matrix from a Wishart distribution.
         :param dimension: An integer that specifies the dimension of the data space.
         :param tightness: A float that controls the amount by which a covariance matrix is scaled.
         :param standard: A boolean that determines whether the covariance matrix is the identity matrix or is random.
@@ -34,9 +35,8 @@ class GaussianMixtureData:
         if standard:
             return np.identity(dimension)
         else:
-            x = np.random.rand(dimension, dimension)
-            y = 0.5*(x+x.T)
-            cluster_variance = np.identity(dimension) + y
+            w = wishart(df=dimension, scale=np.identity(dimension))
+            cluster_variance = w.rvs()
             cluster_variance = np.random.uniform(0.1, tightness) * cluster_variance
             return cluster_variance
 
@@ -223,10 +223,10 @@ class GaussianMixtureData:
             plt.plot(self.cluster_means[:, 0], self.cluster_means[:, 1], 'rs', markersize=6)
             if kmc > 0:
                 kmc_means = self.k_means(number_of_clusters=kmc)
-                plt.plot(kmc_means[:, 0], kmc_means[:, 1], 'ys', markersize=6)
+                plt.plot(kmc_means[:, 0], kmc_means[:, 1], 'yo', markersize=10)
             if gmm > 0:
                 gmm_means = self.gmm_means(number_of_clusters=gmm)
-                plt.plot(gmm_means[:, 0], gmm_means[:, 1], 'ks', markersize=6)
+                plt.plot(gmm_means[:, 0], gmm_means[:, 1], 'ks', markersize=5)
             plt.axis('equal')
             plt.show()
 
@@ -266,8 +266,3 @@ def observe(number_of_iterations=1,
         print("ITERATION:", i+1)
         y.report()
         y.show(kmc=y.k_means(), gmm=y.gmm_means())
-
-"""
-Need to add a method to write your data to some file.
-Need a way to name your data.
-"""
