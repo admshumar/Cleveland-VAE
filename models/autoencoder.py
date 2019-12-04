@@ -6,9 +6,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from tensorflow.keras.layers import Activation, Dense, Input
-from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import BatchNormalization, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras import optimizers
 from data import data_generator
 from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
@@ -21,7 +22,7 @@ import numpy as np
 def get_power_sequence(n):
     k = len(bin(n)) - 3
     power_sequence = [2**i for i in range(1, k+1)]
-    if power_sequence[-1]==n:
+    if power_sequence[-1] == n:
         power_sequence=power_sequence[:-1]
     power_sequence.append(n)
     return power_sequence[::-1]
@@ -29,7 +30,7 @@ def get_power_sequence(n):
 # Load data
 def get_data(synthetic=True):
     if synthetic:
-        gmm = data_generator.GaussianMixtureData(dimension=16, tightness=2, random_cluster_size=True)
+        gmm = data_generator.GaussianMixtureData(dimension=16, tightness=0.2)
         data = gmm.data
         dimension = gmm.dimension
     else:
@@ -41,7 +42,7 @@ def get_data(synthetic=True):
     return x_train, x_test, dimension
 
 
-x_train, x_test, dimension = get_data(synthetic=False)
+x_train, x_test, dimension = get_data(synthetic=True)
 power_sequence = get_power_sequence(dimension)
 
 # Network parameters
@@ -52,9 +53,13 @@ latent_dim = power_sequence[-1]
 # Encoder Structure
 inputs = Input(shape=input_shape, name='encoder_input')
 z = inputs
+# z = Dropout(rate=0.5)(z)
 for dim in power_sequence[1:]:
-    z = Dense(dim)(z)
+    z = Dense(dim,
+              activation='relu'
+              )(z)
     z = BatchNormalization()(z)
+    #z = Dropout(rate=0.5)(z)
 
 # Instantiate Encoder
 encoder = Model(inputs, z, name='encoder')
@@ -64,9 +69,12 @@ encoder.summary()
 latent_inputs = Input(shape=(latent_dim,), name='decoder_input')
 x = latent_inputs
 for dim in power_sequence[::-1][1:]:
-    x = Dense(dim)(x)
+    x = Dense(dim,
+              activation='tanh'
+              )(x)
     x = BatchNormalization()(x)
-outputs = Activation('sigmoid', name='decoder_output')(x)
+    #x = Dropout(rate=0.5)(x)
+outputs = x
 
 # Instantiate Decoder
 decoder = Model(latent_inputs, outputs, name='decoder')
@@ -75,7 +83,9 @@ decoder.summary()
 # Instantiate Autoencoder Model
 autoencoder = Model(inputs, decoder(encoder(inputs)), name='autoencoder')
 autoencoder.summary()
-autoencoder.compile(loss='mse', optimizer='adam')
+autoencoder.compile(loss='mse',
+                    optimizer=optimizers.Adam(lr=1e-3)
+                    )
 
 # TensorBoard callbacks
 tensorboard_callback = TensorBoard(log_dir='./logs',
@@ -84,16 +94,18 @@ tensorboard_callback = TensorBoard(log_dir='./logs',
                                    write_images=True)
 
 # Train the autoencoder
+x_train = (x_train - np.mean(x_train))/np.std(x_train)
 autoencoder.fit(x_train,
                 x_train,
                 # validation_data=(x_test, x_test),
-                epochs=500,
+                epochs=10000,
                 batch_size=batch_size,
                 callbacks=[tensorboard_callback])
 print("Autoencoder trained.\n")
 
+x_test = (x_test - np.mean(x_test))/np.std(x_test)
 x_decoded = autoencoder.predict(x_test)
-x_latent = encoder.predict(x_test)
+x_latent = encoder.predict(x_test) # Normalize?
 
 
 def show(data, kmc=0, gmc=0):
