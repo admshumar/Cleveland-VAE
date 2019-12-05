@@ -8,7 +8,7 @@ from __future__ import print_function
 from tensorflow.keras.layers import Activation, Dense, Input
 from tensorflow.keras.layers import BatchNormalization, Dropout
 from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import TensorBoard
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
 from tensorflow.keras import optimizers
 from data import data_generator
 from sklearn.model_selection import train_test_split
@@ -39,10 +39,14 @@ def get_data(synthetic=True):
         data = data[1:, 2:]
         dimension = len(data[0])
     x_train, x_test = data, data
+    # x_train, y_train, x_test, y_test = train_test_split()
     return x_train, x_test, dimension
 
-
-x_train, x_test, dimension = get_data(synthetic=True)
+"""
+synthetic=False: Lauge's data
+synthetic=True: artificially generated GMM data
+"""
+x_train, x_test, dimension = get_data(synthetic=False)
 power_sequence = get_power_sequence(dimension)
 
 # Network parameters
@@ -68,12 +72,14 @@ encoder.summary()
 # Decoder Structure
 latent_inputs = Input(shape=(latent_dim,), name='decoder_input')
 x = latent_inputs
-for dim in power_sequence[::-1][1:]:
+for dim in power_sequence[::-1][1:-1]:
     x = Dense(dim,
               activation='tanh'
               )(x)
     x = BatchNormalization()(x)
     #x = Dropout(rate=0.5)(x)
+x = Dense(power_sequence[::-1][-1], activation='tanh')(x)
+x = BatchNormalization()(x)
 outputs = x
 
 # Instantiate Decoder
@@ -95,12 +101,16 @@ tensorboard_callback = TensorBoard(log_dir='./logs',
 
 # Train the autoencoder
 x_train = (x_train - np.mean(x_train))/np.std(x_train)
+early_stopping = EarlyStopping(monitor='loss',
+                               min_delta=1e-4,
+                               patience=100,
+                               restore_best_weights=True)
 autoencoder.fit(x_train,
                 x_train,
                 # validation_data=(x_test, x_test),
                 epochs=10000,
                 batch_size=batch_size,
-                callbacks=[tensorboard_callback])
+                callbacks=[tensorboard_callback, early_stopping])
 print("Autoencoder trained.\n")
 
 x_test = (x_test - np.mean(x_test))/np.std(x_test)
