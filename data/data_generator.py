@@ -248,7 +248,10 @@ class GaussianMixtureData:
               self.mixture_weights,
               '\n')
 
+    def show_cluster_map(self):
+        return None
 
+"""
 def observe(number_of_iterations=1,
             dimension=2,
             number_of_clusters=4,
@@ -266,3 +269,5 @@ def observe(number_of_iterations=1,
         print("ITERATION:", i+1)
         y.report()
         y.show(kmc=y.k_means(), gmm=y.gmm_means())
+"""
+

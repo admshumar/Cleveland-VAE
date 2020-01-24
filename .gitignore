@@ -5,3 +5,6 @@ tensorboard.sh
 data/__pycache__/
 models/.DS_Store
 cleveland_data.csv
+autoencoder
+decoder
+encoder

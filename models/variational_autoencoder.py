@@ -25,6 +25,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import os
+import pydot
+import graphviz
 
 
 # reparameterization trick
