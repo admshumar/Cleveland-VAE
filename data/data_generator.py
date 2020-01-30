@@ -47,7 +47,7 @@ class GaussianMixtureData:
         :param dimension: An integer that specifies the dimension of the data space.
         :param number_of_clusters: An integer the specifies the number of cluster centroids.
         :param cube_side_length: Length of each side of the n-cube.
-        :return: A matrix of cluser centroids.
+        :return: A matrix of cluster centroids.
         """
         cluster_means = np.empty(shape=(number_of_clusters, dimension))
         for i in range(number_of_clusters):
@@ -93,7 +93,8 @@ class GaussianMixtureData:
         Generate an array of numbers of points for a family of clusters.
         :param number_of_clusters: An integer specifying the number of clusters.
         :param random_cluster_size: A boolean indicating whether the number of cluster points varies among clusters.
-        :return: A numerical data array of integers specifying the number of cluster points for a family of clusters.
+        :return: A numerical data array of integers specifying the number of cluster points for each
+        cluster in a family of clusters.
         """
         cluster_size = GaussianMixtureData.cluster_size
         if random_cluster_size:
@@ -134,13 +135,30 @@ class GaussianMixtureData:
     def get_data(cls, clusters):
         """
         Concatenate all cluster points into one matrix for input into models.
-        :param clusters: A set of dictionaries of cluster data.
+        :param clusters: A dictionary whose keys are integer indices and whose values are 2-tuples of
+                cluster means and NumPy arrays of cluster points.
         :return: A matrix of data points.
         """
         data = clusters[0][1]
         for i in range(1, len(clusters)):
             data = np.concatenate((data, clusters[i][1]))
         return data
+
+    @classmethod
+    def get_labelled_data(cls, clusters):
+        """
+        Concatenate all cluster points and their labels into one matrix.
+        :param clusters: A dictionary whose keys are integer indices and whose values are 2-tuples of
+                cluster means and NumPy arrays of cluster points.
+        :return: A matrix of labelled data points.
+        """
+        data = clusters[0][1]
+        labelled_data = np.concatenate(([[0]]*data.shape[0], data), axis=1)
+        for i in range(1, len(clusters)):
+            data = clusters[i][1]
+            more_labelled_data = np.concatenate(([[i]]*data.shape[0], data), axis=1)
+            labelled_data = np.concatenate((labelled_data, more_labelled_data))
+        return labelled_data
 
     def __init__(self,
                  dimension=2,
@@ -176,6 +194,7 @@ class GaussianMixtureData:
         self.total_number_of_points = sum(self.cluster_sizes)
         self.mixture_weights = (1/self.total_number_of_points)*self.cluster_sizes
         self.data = GaussianMixtureData.get_data(self.clusters)
+        self.labelled_data = GaussianMixtureData.get_labelled_data(self.clusters)
 
     def k_means(self, number_of_clusters=0):
         """
@@ -250,24 +269,3 @@ class GaussianMixtureData:
 
     def show_cluster_map(self):
         return None
-
-"""
-def observe(number_of_iterations=1,
-            dimension=2,
-            number_of_clusters=4,
-            tightness=5,
-            cube_side_length=10,
-            random_cluster_size=False,
-            standard=False):
-    for i in range(number_of_iterations):
-        y = GaussianMixtureData(dimension=dimension,
-                                number_of_clusters=number_of_clusters,
-                                tightness=tightness,
-                                cube_side_length=cube_side_length,
-                                random_cluster_size=random_cluster_size,
-                                standard=standard)
-        print("ITERATION:", i+1)
-        y.report()
-        y.show(kmc=y.k_means(), gmm=y.gmm_means())
-"""
-
