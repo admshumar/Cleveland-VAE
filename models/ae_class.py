@@ -120,7 +120,7 @@ class Autoencoder:
         data = data[1:, ]
         if is_restricted:
             for lbl in restriction_labels:
-                restricted_data = np.concatenate(tuple(data[data[:, 1] == lbl] for lbl in restriction_labels)) # RED FLAG.
+                restricted_data = np.concatenate(tuple(data[data[:, 1] == lbl] for lbl in restriction_labels))
                 data = restricted_data
 
         train, test = train_test_split(data, test_size=0.30, random_state=16, stratify=data[:, 1])
