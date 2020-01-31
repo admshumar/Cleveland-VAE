@@ -31,12 +31,19 @@ class Autoencoder:
     @classmethod
     def normalize(cls, matrix):
         """
-        Define a tensor normalization.
+        Normalize a NumPy array. (Really unnecessary and should be removed.)
+        :param matrix: A NumPy array.
+        :return: A standardized NumPy array.
         """
         return (matrix - np.mean(matrix)) / np.std(matrix), np.mean(matrix), np.std(matrix)
 
     @classmethod
     def aggregate_labels(cls, list_of_labels):
+        """
+        Construct the class distribution of labels.
+        :param list_of_labels: A NumPy array of class labels.
+        :return: A dictionary whose keys are classes and whose values are class probabilities.
+        """
         d = {i: len(list_of_labels[list_of_labels == i]) / len(list_of_labels) for i in np.unique(list_of_labels)}
         return d
 
@@ -51,30 +58,31 @@ class Autoencoder:
             os.makedirs(directory)
 
     @classmethod
-    def get_power_sequence(cls, n, exponent):
+    def get_power_sequence(cls, data_dimension, exponent):
         """
         Given an integer, construct a list of integers starting with the given integer, then all positive
         powers of two that are less than the given integer.
-        :param n:
-        :param exponent:
-        :return: A list of integers.
+        :param data_dimension: An integer that represents the dimension of an input data set.
+        :param exponent: The exponent of the dimension of the latent space representation (which is expressed as a
+            power of two.)
+        :return: A list of integers, which are the dimensions of the feature space representations in the autoencoder.
         """
-        k = len(bin(n)) - 3
+        k = len(bin(data_dimension)) - 3
         sequence = [2 ** i for i in range(exponent, k + 1)]
-        if sequence[-1] == n:
+        if sequence[-1] == data_dimension:
             sequence = sequence[:-1]
-        sequence.append(n)
+        sequence.append(data_dimension)
         return sequence[::-1]
 
     @classmethod
     def get_synthetic_data(cls, number_of_clusters):
         """
-        Grab some synthetic data by instantiating a data generator that
-        uses a Gaussian mixture model, we set the variable 'data' equal to the labelled data produced by the generator,
-        we get its dimension, and we produce a class-stratified train/test split of the labelled data.
+        Grab some synthetic data by instantiating a Gaussian mixture model data generator, set the variable 'data'
+        equal to the labelled data produced by the generator, get its dimension, and produce a class-stratified
+        train/test split of the labelled data.
         :param number_of_clusters: An integer indicating the number of Gaussian clusters to be constructed.
         :return: A 4-tuple consisting of a train/test split of the data, an integer giving the number of features, and
-                            the data.
+            the data.
         """
         gmm = data_generator.GaussianMixtureData(dimension=64,
                                                  number_of_clusters=number_of_clusters,
@@ -98,16 +106,17 @@ class Autoencoder:
     @classmethod
     def get_adni_data(cls, is_restricted, restriction_labels):
         """
-        If the data are not synthetic, then we're dealing with the ADNI dataset. We want to split these data according
-        to class labels, and then create a train/test split.
+        Grab the ADNI data set (in .csv form), cast it to a NumPy array, throw away the first row (which consists of
+        strings that indicate the features), then do a class-stratified train/test split.
+        :param is_restricted: A boolean that indicates whether we ignore any classes during training and validation.
+        :param restriction_labels: A list of labels to be kept, provided that we decide to ignore some labels.
+        :return: The training data, the test data, the number of features in the ADNI data, and a concatenation of the
+            the training data and the test data, which is mainly used to keep track of the permutation of the labels
+            produced by the train/test split.
         """
         from numpy import genfromtxt
         data = genfromtxt('../data/cleveland_data.csv', delimiter=',')
-        """
-        After the data are gotten from the csv file, we throw away the top row (which corresponds to strings indicating
-        the various features) and then create a train-test split that is stratified according to the class label. The
-        class labels are found in column 1.
-        """
+
         data = data[1:, ]
         if is_restricted:
             for lbl in restriction_labels:
@@ -126,11 +135,16 @@ class Autoencoder:
     @classmethod
     def augment_data(cls, pre_augmented_data, covariance_coefficient, augmentation_size):
         """
-        Data augmentation.
+        Augments a given data set by placing at each data point a Gaussian whose mean is the data point and then
+        sampling from that Gaussian. The covariances of each Gaussian are the same. (It would be interesting to have
+        more flexibility for the covariances.)
+        :param pre_augmented_data: A NumPy array of data to be augmented.
+        :param covariance_coefficient: A float which multiplies the identity covariance matrix.
+        :param augmentation_size: A integer indicating the number of points to be sampled.
+        :return: A NumPy array of augmented data.
         """
-        augmenter = data_augmenter.DataAugmenter(pre_augmented_data,
-                                                 covariance_coefficient * np.identity(len(pre_augmented_data[0])),
-                                                 augmentation_size)
+        covariance = covariance_coefficient * np.identity(len(pre_augmented_data[0]))
+        augmenter = data_augmenter.DataAugmenter(pre_augmented_data, covariance, augmentation_size)
         return augmenter.augment()
 
     def __init__(self,
@@ -158,6 +172,41 @@ class Autoencoder:
                  l2_constant=1e-4,
                  early_stopping_delta=0.1
                  ):
+        """
+        For the ADNI autoencoder, we have options that permit us to size up any symmetric architecture we choose, along
+        with whether the data to be autoencoded are from a synthetic data set or a real-world data set. We can decide
+        which class labels we want to consider, how to augment the data, and what network hyperparameters we want to
+        use. This permits rapid experimentation via repeated instantiations of the class with the desired options and
+        hyperparameters. It also provides a method of writing results to directories that quickly indicate the network
+        options and hyperparameter values.
+        :param deep: A boolean indicating whether the autoencoder has more than one hidden layer.
+        :param is_synthetic: A boolean indicating whether the data are generated or come from a real world data set.
+        :param number_of_clusters: An integer indicating the number of clusters to be produced by clustering algorithms.
+        :param is_restricted: A boolean indicating whether at least one class label is to be ignored.
+        :param restriction_labels: A list of integers that indicate the class labels to be retained in the data set.
+        :param enable_stochastic_gradient_descent: A boolean indicating whether SGD is performed during training.
+        :param has_custom_layers: A boolean indicating the layer structure of the network.
+        :param exponent_of_latent_space_dimension: An integer indicating the size of the latent space.
+        :param enable_augmentation: A boolean indicating whether data augmentation is to be performed.
+        :param augmentation_size: An integer indicating how much data are to be sampled for each existing data point.
+        :param covariance_coefficient: A float indicating the scalar multiple of the identity covariance matrix for the
+            Gaussians that are used to augment the data.
+        :param show_representations: A boolean indicating whether matplotlib.pyplot.show is invoked after an inference
+            is performed. By default this is False.
+        :param number_of_epochs: An integer indicating the number of training epochs.
+        :param batch_size: An integer indicating the batch size.
+        :param learning_rate: A float indicating the learning rate.
+        :param enable_batch_normalization: A boolean indicating whether batch normalization is performed.
+        :param enable_dropout: A boolean indicating whether dropout is performed during training.
+        :param enable_activation: A boolean indicating whether activation functions are used during training. In the
+            case of an autoencoder, removing network activations will give us an algorithm similar to PCA.
+        :param encoder_activation: A boolean indicating the activation function to be used in the encoder layers.
+        :param decoder_activation: A boolean indicating the activation function to be used in the decoder layers.
+        :param dropout_rate: A float indicating the proportion of neurons to be deactivated.
+        :param l2_constant: A float indicating the amount of L2 regularization.
+        :param early_stopping_delta: A float indicating the number of epochs before training is halted due to an
+            insufficient change in the training loss.
+        """
         self.deep = deep
         self.is_synthetic = is_synthetic
         self.is_restricted = is_restricted
@@ -193,7 +242,7 @@ class Autoencoder:
         
         if self.enable_augmentation:
             self.x_train = Autoencoder.augment_data(self.x_train, self.covariance_coefficient, self.augmentation_size)
-            # Can't define w_train and w_test here. How to deal?
+
         """
         Hyperparameters for the neural network.
         """
@@ -611,6 +660,8 @@ class Autoencoder:
             if self.show_representations:
                 plt.show()
                 plt.show(block=False)
+
+        plt.close('all')
 
     def show_latent_representation(self):
         self.begin_logging()
